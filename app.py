@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, make_response
 from flask_assets import Environment, Bundle
 from sqlite3 import connect, OperationalError
 from random import randint
@@ -29,18 +29,46 @@ def home():
     with open('home.html') as fh:
         return fh.read()
 
-@app.route("/plot")
-def plot():
-    user_id = 447893
-    data = list(cursor.execute('SELECT datetime, satisfaction FROM mood WHERE user_id = ? ORDER BY DATETIME(datetime) ASC', (user_id,)))
-    print(data)
+USER_ID = 447893
+
+@app.route("/data")
+def data():
+    data = list(cursor.execute('SELECT datetime, satisfaction FROM mood WHERE user_id = ? ORDER BY DATETIME(datetime) ASC', (USER_ID,)))
     if len(data) > 0:
         time_data, satisfaction_data = zip(*data)
     else:
         time_data, satisfaction_data = [], []
 
-    daily_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ? AND DATETIME(datetime) >= DATETIME("now", "-1 days")', (user_id,)))[0][0]
-    all_time_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ?', (user_id,)))[0][0]
+    daily_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ? AND DATETIME(datetime) >= DATETIME("now", "-1 days")', (USER_ID,)))[0][0]
+    all_time_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ?', (USER_ID,)))[0][0]
+
+    response = make_response(
+        dumps(
+            dict(
+                time_data=time_data,
+                satisfaction_data=satisfaction_data,
+                daily_average=daily_average,
+                all_time_average=all_time_average,
+            ),
+        ),
+    )
+
+    response.headers['Content-type'] = 'application/json'
+
+    return response
+
+@app.route("/plot")
+def plot():
+    data = list(cursor.execute('SELECT datetime, satisfaction FROM mood WHERE user_id = ? ORDER BY DATETIME(datetime) ASC', (USER_ID,)))
+    if len(data) > 0:
+        time_data, satisfaction_data = zip(*data)
+    else:
+        time_data, satisfaction_data = [], []
+
+    daily_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ? AND DATETIME(datetime) >= DATETIME("now", "-1 days")', (USER_ID,)))[0][0]
+    all_time_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ?', (USER_ID,)))[0][0]
+
+    last_photo_url = list(cursor.execute('SELECT image_url FROM mood WHERE user_id = ? ORDER BY DATETIME(datetime) DESC LIMIT 1', (USER_ID,)))[0][0]
 
     with open('plot.html') as fh:
         return Template(fh.read()).render(
@@ -49,6 +77,7 @@ def plot():
             daily_average=daily_average,
             all_time_average=all_time_average,
             json=dumps,
+            last_photo_url=last_photo_url,
         )
 
 @app.route('/upload_photo', methods=['GET', 'POST'])
