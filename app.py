@@ -30,13 +30,22 @@ def home():
 
 @app.route("/plot")
 def plot():
-    data = list(cursor.execute('SELECT datetime, satisfaction FROM mood WHERE user_id = 1'))
-    time_data, satisfaction_data = zip(*data)
+    user_id = 447893
+    data = list(cursor.execute('SELECT datetime, satisfaction FROM mood WHERE user_id = ?', (user_id,)))
+    if len(data) > 0:
+        time_data, satisfaction_data = zip(*data)
+    else:
+        time_data, satisfaction_data = [], []
+
+    daily_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ? AND datetime >= DATETIME("now", "-1 days")', (user_id,)))[0][0]
+    all_time_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ?', (user_id,)))[0][0]
 
     with open('plot.html') as fh:
         return Template(fh.read()).render(
             time_data=list(map(str, time_data)),
             satisfaction_data=satisfaction_data,
+            daily_average=daily_average,
+            all_time_average=all_time_average,
             json=dumps,
         )
 
@@ -52,6 +61,7 @@ def upload_photo():
             'INSERT INTO mood (user_id, datetime, satisfaction, event, image_url) VALUES (?, DATETIME("now"), ?, "in", ?)',
             (user_id, score, photo_url),
         )
+        return 'Success'
     except:
         raise
 
