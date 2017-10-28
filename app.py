@@ -6,6 +6,7 @@ from argparse import ArgumentParser, Namespace
 from jinja2 import Template
 from json import dumps, loads
 from os.path import basename, join
+from ast import literal_eval
 
 from facial import satisfaction_score_for
 
@@ -31,13 +32,14 @@ def home():
 @app.route("/plot")
 def plot():
     user_id = 447893
-    data = list(cursor.execute('SELECT datetime, satisfaction FROM mood WHERE user_id = ?', (user_id,)))
+    data = list(cursor.execute('SELECT datetime, satisfaction FROM mood WHERE user_id = ? ORDER BY DATETIME(datetime) ASC', (user_id,)))
+    print(data)
     if len(data) > 0:
         time_data, satisfaction_data = zip(*data)
     else:
         time_data, satisfaction_data = [], []
 
-    daily_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ? AND datetime >= DATETIME("now", "-1 days")', (user_id,)))[0][0]
+    daily_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ? AND DATETIME(datetime) >= DATETIME("now", "-1 days")', (user_id,)))[0][0]
     all_time_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ?', (user_id,)))[0][0]
 
     with open('plot.html') as fh:
@@ -73,6 +75,7 @@ def parse_args() -> Namespace:
     parser = ArgumentParser()
 
     parser.add_argument('--purge', action='store_true')
+    parser.add_argument('--import-data', type=str, default=None)
 
     return parser.parse_args()
 
@@ -81,5 +84,14 @@ if __name__ == '__main__':
 
     if args.purge:
         cursor.execute('DELETE FROM mood')
+    elif args.import_data is not None:
+        with open(args.import_data) as fh:
+            data = literal_eval(fh.read())
+        print(data)
+        assert isinstance(data, list) and all(len(row) == 5 for row in data), data
+        cursor.executemany(
+            'INSERT INTO mood (user_id, datetime, satisfaction, event, image_url) VALUES (?, ?, ?, ?, ?)',
+            data,
+        )
     else:
         print(list(cursor.execute('SELECT * FROM mood')))
