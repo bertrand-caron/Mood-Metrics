@@ -18,14 +18,18 @@ if False:
     print(get_detect.text)
     print(get_detect.url)
 
-def satisfaction_for(img_url: str) -> int:
+def satisfaction_score_for(img_url: str) -> int:
     media_id_request = post(
         'https://api.kairos.com/v2/media',
         headers=HEADERS,
-        params=dict(source=image_url)
+        params=dict(source=img_url)
     )
 
-    media_id = loads(media_id_request.text)['id']
+    try:
+        media_id = loads(media_id_request.text)['id']
+    except:
+        print(loads(media_id_request.text))
+        raise
 
     emotion_request = get(
         'https://api.kairos.com/v2/analytics/{id}'.format(id=media_id),
@@ -41,8 +45,8 @@ def satisfaction_for(img_url: str) -> int:
     except:
         return None
 
-IMAGES = ['chris_happy', 'chris_sad', 'krishore_happy', 'krishore_neutral', 'krishore_sad', 'bertrand_happy', 'bertrand_neutral', 'bertrand_sad']
+if __name__ == '__main__':
+    IMAGES = ['http://scmb-atb.biosci.uq.edu.au/dihedral_data/project_13/bertrand.png', 'https://s3.amazonaws.com/PayAus/logins/photos/050/333/583/original/login_1234_636447993180000000.png?1509166527', 'chris_happy', 'chris_sad', 'krishore_happy', 'krishore_neutral', 'krishore_sad', 'bertrand_happy', 'bertrand_neutral', 'bertrand_sad']
 
-for image_url in map(lambda i: IMAGE_SOURCE.format(i), IMAGES):
-    print(satisfaction_for(image_url))
-
+    for image_url in map(lambda i: IMAGE_SOURCE.format(i) if not i.startswith('http') else i, IMAGES):
+        print(image_url, satisfaction_score_for(image_url))

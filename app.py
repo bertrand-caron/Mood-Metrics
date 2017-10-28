@@ -1,10 +1,13 @@
-from flask import Flask
+from flask import Flask, request
 from flask_assets import Environment, Bundle
 from sqlite3 import connect, OperationalError
 from random import randint
 from argparse import ArgumentParser, Namespace
 from jinja2 import Template
-from json import dumps
+from json import dumps, loads
+from os.path import basename, join
+
+from facial import satisfaction_score_for
 
 conn = connect('mood.db', isolation_level=None)
 cursor = conn.cursor()
@@ -12,7 +15,9 @@ cursor = conn.cursor()
 try:
     cursor.execute('SELECT * FROM mood')
 except OperationalError:
-    cursor.execute('CREATE TABLE mood (user_id INTEGER, datetime DATETIME, event VARCHAR(3), satisfaction INTEGER)')
+    cursor.execute('CREATE TABLE mood (user_id INTEGER, datetime DATETIME, event VARCHAR(3), satisfaction INTEGER, image_url VARCHAR(1000))')
+
+ASSETS_DIR = 'assets'
 
 app = Flask(__name__)
 assets = Environment(app)
@@ -35,7 +40,20 @@ def plot():
             json=dumps,
         )
 
-def
+@app.route('/upload_photo', methods=['GET', 'POST'])
+def upload_photo():
+    try:
+        json_payload = loads(request.data.decode())['payload']
+        user_id, photo_url = map(lambda key: json_payload['body'][key], ['user_id', 'photo'])
+
+        photo_url, *_ = photo_url.split('?')
+        score = satisfaction_score_for(photo_url)
+        cursor.execute(
+            'INSERT INTO mood (user_id, datetime, satisfaction, event, image_url) VALUES (?, DATETIME("now"), ?, "in", ?)',
+            (user_id, score, photo_url),
+        )
+    except:
+        raise
 
 USER_IDS = {
 	'Chris': 1,
@@ -54,10 +72,4 @@ if __name__ == '__main__':
     if args.purge:
         cursor.execute('DELETE FROM mood')
     else:
-        for user in [(USER_IDS['Chris'], randint(0, 50) + 50, 'in'), (USER_IDS['Chris'], randint(0, 50), 'out')]:
-            cursor.execute(
-                'INSERT INTO mood (user_id, datetime, satisfaction, event) VALUES (?, DATETIME("now"), ?, ?)',
-                user,
-            )
-
         print(list(cursor.execute('SELECT * FROM mood')))
