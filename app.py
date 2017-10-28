@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_assets import Environment, Bundle
 from sqlite3 import connect, OperationalError
 from random import randint
 from argparse import ArgumentParser, Namespace
@@ -14,9 +15,11 @@ except OperationalError:
     cursor.execute('CREATE TABLE mood (user_id INTEGER, datetime DATETIME, event VARCHAR(3), satisfaction INTEGER)')
 
 app = Flask(__name__)
+assets = Environment(app)
+#img_asset = Bundle()
 
 @app.route("/")
-def hello():
+def home():
     with open('home.html') as fh:
         return fh.read()
 
@@ -31,6 +34,8 @@ def plot():
             satisfaction_data=satisfaction_data,
             json=dumps,
         )
+
+def
 
 USER_IDS = {
 	'Chris': 1,
