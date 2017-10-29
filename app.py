@@ -39,7 +39,7 @@ def data():
     else:
         time_data, satisfaction_data = [], []
 
-    daily_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ? AND DATETIME(datetime) >= DATETIME("now", "-1 days")', (USER_ID,)))[0][0]
+    daily_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ? AND DATETIME(datetime) >= DATETIME("now", "-2 days")', (USER_ID,)))[0][0]
     all_time_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ?', (USER_ID,)))[0][0]
 
     response = make_response(
@@ -65,7 +65,7 @@ def plot():
     else:
         time_data, satisfaction_data = [], []
 
-    daily_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ? AND DATETIME(datetime) >= DATETIME("now", "-1 days")', (USER_ID,)))[0][0]
+    daily_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ? AND DATETIME(datetime) >= DATETIME("now", "-2 days")', (USER_ID,)))[0][0]
     all_time_average = list(cursor.execute('SELECT AVG(satisfaction) FROM mood WHERE user_id = ?', (USER_ID,)))[0][0]
 
     last_photo_url = list(cursor.execute('SELECT image_url FROM mood WHERE user_id = ? ORDER BY DATETIME(datetime) DESC LIMIT 1', (USER_ID,)))[0][0]
@@ -123,4 +123,4 @@ if __name__ == '__main__':
             data,
         )
     else:
-        print(list(cursor.execute('SELECT * FROM mood')))
+        print(list(cursor.execute('SELECT * FROM mood ORDER BY DATETIME(datetime) ASC')))
